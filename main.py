@@ -68,8 +68,21 @@ OUTPUT — RETURN ONLY VALID JSON (no markdown, no comments). Order clips by pre
 }}
 """
 
-# Load the YOLO model once (Keep for backup or scene analysis if needed)
-model = YOLO('yolov8n.pt')
+def _load_yolo_model():
+    """Load YOLOv8n, preferring assets baked into the Docker image.
+
+    The compose bind mount hides /app at runtime, so the model is baked at
+    /models/yolov8n.pt instead. Local (non-Docker) runs use ./yolov8n.pt.
+    """
+    for path in filter(None, (os.environ.get("YOLO_MODEL_PATH"), "/models/yolov8n.pt", "yolov8n.pt")):
+        if os.path.exists(path):
+            print(f"🎯 YOLO model: {path}")
+            return YOLO(path)
+    # Last resort: let ultralytics download it into the current directory
+    return YOLO("yolov8n.pt")
+
+
+model = _load_yolo_model()
 
 # --- MediaPipe Setup ---
 # Use standard Face Detection (BlazeFace) for speed

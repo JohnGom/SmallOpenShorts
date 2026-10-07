@@ -43,19 +43,26 @@ RUN pip install --upgrade --no-cache-dir yt-dlp
 # Copy application code
 COPY . .
 
-# Create a non-root user (Moved up)
-RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+# Create a non-root user with a FIXED uid/gid (default 1000 = typical host user,
+# e.g. "opc" on Oracle Cloud) so bind-mounted dirs (./output, ./uploads, repo)
+# are writable from inside the container.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN groupadd -g ${APP_GID} appuser && useradd -u ${APP_UID} -g appuser -d /app -s /sbin/nologin appuser
 
-# Create directories including Ultralytics cache config
-RUN mkdir -p /app/uploads /app/output /tmp/Ultralytics
-# Fix permissions: /app for code/uploads, /tmp/Ultralytics for AI cache
-RUN chown -R appuser:appuser /app /tmp/Ultralytics
+# Create directories including Ultralytics cache config.
+# /models lives OUTSIDE /app on purpose: compose bind-mounts the host repo over
+# /app at runtime, which would hide anything baked under /app.
+RUN mkdir -p /app/uploads /app/output /tmp/Ultralytics /models
+# Fix permissions: /app for code/uploads, /tmp/Ultralytics for AI cache, /models for assets
+RUN chown -R appuser:appuser /app /tmp/Ultralytics /models
 
 # Switch to non-root user
 USER appuser
 
-# Pre-download YOLO model on build (now running as appuser)
-RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+# Pre-download YOLO model at build time, outside the bind mount so jobs never
+# need to download it at runtime (would fail on read-only/foreign-uid mounts)
+RUN python -c "from ultralytics import YOLO; YOLO('/models/yolov8n.pt')"
 
 # Expose FastAPI port
 EXPOSE 8000

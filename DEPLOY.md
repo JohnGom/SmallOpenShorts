@@ -107,6 +107,13 @@ cd ~
 git clone https://github.com/TU-USUARIO/TU-REPO.git openshorts
 cd openshorts
 git checkout personal-main   # o main
+
+# Directorios de trabajo ANTES del primer "docker compose up":
+# si no existen, Docker los crea como root y después el contenedor
+# no puede escribir dentro de ellos.
+mkdir -p output uploads
+# Si algo quedó como root (p. ej. clonaste con sudo), repáralo:
+sudo chown -R "$(id -u):$(id -g)" .
 ```
 
 Crea el `.env` de servidor:
@@ -174,7 +181,13 @@ docker compose up -d --build
 ```bash
 docker compose ps            # ambos servicios "running"
 docker compose logs -f backend   # debe terminar con "Uvicorn running..."
+docker compose exec backend id   # uid=1000(appuser) — debe coincidir con "id -u" en el host
+docker compose exec backend ls -l /models/yolov8n.pt   # modelo horneado, fuera del mount
 ```
+
+> Si tu usuario del host **no** tiene UID 1000 (raro: `opc` y `ubuntu` suelen
+> tenerlo), reconstruye con tu UID/GID:
+> `docker compose build --build-arg APP_UID=$(id -u) --build-arg APP_GID=$(id -g) backend && docker compose up -d`
 
 Abre en el navegador:
 
@@ -311,6 +324,7 @@ df -h /
 
 | Síntoma | Causa probable | Solución |
 |---------|----------------|----------|
+| `ConnectionError ... Permission denied: 'yolov8n.pt'` | El bind mount esconde el modelo y el contenedor no puede escribir en el repo del host | Actualiza el repo (el modelo ahora se hornea en `/models`, fuera del mount) y reconstruye: `sudo chown -R "$(id -u):$(id -g)" . && docker compose up -d --build` |
 | `Killed` al transcribir / job muere sin error | Poca RAM (OOM) | Aumenta swap (paso 2) y/o `MAX_CONCURRENT_JOBS=1`; mejor shape con más RAM |
 | `❌ Gemini Error … model ... not found` o 404 | Modelo no disponible en tu proyecto | `GEMINI_MODEL=gemini-3.5-flash` en `.env` y reinicia: `docker compose restart backend` |
 | `429` / `overloaded` de Gemini | Límite de cuota | El pipeline reintenta solo (3 intentos); baja la frecuencia de uso |
