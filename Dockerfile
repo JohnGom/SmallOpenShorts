@@ -46,16 +46,20 @@ COPY . .
 # Create a non-root user with a FIXED uid/gid (default 1000 = typical host user,
 # e.g. "opc" on Oracle Cloud) so bind-mounted dirs (./output, ./uploads, repo)
 # are writable from inside the container.
+# The home dir lives OUTSIDE the /app bind mount so app caches (HuggingFace
+# whisper model, matplotlib, fontconfig, ultralytics) never depend on host
+# directory permissions.
 ARG APP_UID=1000
 ARG APP_GID=1000
-RUN groupadd -g ${APP_GID} appuser && useradd -u ${APP_UID} -g appuser -d /app -s /sbin/nologin appuser
+RUN groupadd -g ${APP_GID} appuser && useradd -u ${APP_UID} -g appuser -m -d /home/appuser -s /sbin/nologin appuser
+ENV HOME=/home/appuser
 
 # Create directories including Ultralytics cache config.
 # /models lives OUTSIDE /app on purpose: compose bind-mounts the host repo over
 # /app at runtime, which would hide anything baked under /app.
-RUN mkdir -p /app/uploads /app/output /tmp/Ultralytics /models
+RUN mkdir -p /app/uploads /app/output /tmp/Ultralytics /models /home/appuser/.cache
 # Fix permissions: /app for code/uploads, /tmp/Ultralytics for AI cache, /models for assets
-RUN chown -R appuser:appuser /app /tmp/Ultralytics /models
+RUN chown -R appuser:appuser /app /tmp/Ultralytics /models /home/appuser
 
 # Switch to non-root user
 USER appuser

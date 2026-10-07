@@ -325,6 +325,7 @@ df -h /
 | Síntoma | Causa probable | Solución |
 |---------|----------------|----------|
 | `ConnectionError ... Permission denied: 'yolov8n.pt'` | El bind mount esconde el modelo y el contenedor no puede escribir en el repo del host | Actualiza el repo (el modelo ahora se hornea en `/models`, fuera del mount) y reconstruye: `sudo chown -R "$(id -u):$(id -g)" . && docker compose up -d --build` |
+| `Permission denied: '/app/.cache'` o `mkdir -p failed for path /app/.config/matplotlib` | El repo del host no pertenece a tu usuario (p. ej. clonaste con `sudo`), y las cachés del contenedor intentaban escribirse ahí | La caché ya vive en `/home/appuser` (volumen `app_cache`), así que basta: `sudo chown -R "$(id -u):$(id -g)" . && docker compose up -d --build` |
 | `Killed` al transcribir / job muere sin error | Poca RAM (OOM) | Aumenta swap (paso 2) y/o `MAX_CONCURRENT_JOBS=1`; mejor shape con más RAM |
 | `❌ Gemini Error … model ... not found` o 404 | Modelo no disponible en tu proyecto | `GEMINI_MODEL=gemini-3.5-flash` en `.env` y reinicia: `docker compose restart backend` |
 | `429` / `overloaded` de Gemini | Límite de cuota | El pipeline reintenta solo (3 intentos); baja la frecuencia de uso |

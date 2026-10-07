@@ -8,6 +8,9 @@ services:
       - .:/app
       - /app/__pycache__
       - ./output:/app/output
+      # Persist app caches (whisper model, fontconfig, ultralytics) outside the
+      # bind mount so they survive rebuilds and ignore host dir permissions.
+      - app_cache:/home/appuser/.cache
     restart: unless-stopped
 
   frontend:
@@ -21,3 +24,6 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+
+volumes:
+  app_cache:
