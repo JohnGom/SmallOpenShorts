@@ -12,6 +12,10 @@ export default {
         primary: "#3b82f6",
         accent: "#8b5cf6",
       },
+      fontFamily: {
+        sans: ['Sora', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
+      },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       }
